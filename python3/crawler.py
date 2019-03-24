@@ -27,8 +27,8 @@ class Bot(object):
 
     def clearContext(self):
 
-        # Crea una nueva instancia de la cookie
-        self.cookieContext = http.cookiejar.LWPCookieJar()
+        # Crea una nueva instancia de navegación
+        self.cookies = {}
         self.lastUrl = None
 
 
