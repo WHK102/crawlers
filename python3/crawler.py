@@ -7,6 +7,7 @@ import threading
 import socket
 import ssl
 from urllib import parse
+from urllib.parse import urlencode
 
 
 # Clase principal
@@ -38,16 +39,21 @@ class Bot(object):
         customHeaders=None,
         postData=None
     ):
+        # to bytes array
+        if(not isinstance(url, bytes)):
+            url = str(url).encode('utf-8', 'ignore')
 
-        if(customHeaders):
-            # Une las cabeceras personalizadas
-            headers.update(customHeaders)
+        if(postData):
+            
+            if(isinstance(postData, dict)):
+                postData = urlencode(postData)
 
-        referer = url
-        if(self.lastUrl):
-            referer = self.lastUrl
+            if(isinstance(postData, str)):
+                postData = postData.encode('utf-8', 'ignore')
 
-        self.lastUrl = url
+#        if(customHeaders):
+#            # Une las cabeceras personalizadas
+#            headers.update(customHeaders)
 
         #Formatea la dirección URL
         urlParsed = parse.urlparse(url)
@@ -56,42 +62,64 @@ class Bot(object):
             'path'     : urlParsed.path,
             'host'     : urlParsed.netloc,
             'port'     : urlParsed.port,
-            'scheme'   : urlParsed.scheme
+            'scheme'   : urlParsed.scheme,
+            'query'    : urlParsed.query,
+            'uri'      : urlParsed.path + ((b'?' + urlParsed.query) if urlParsed.query else b'')
         }
 
-        if urlData['path'] == '':
-            urlData['path'] = '/'
+        if urlData['path'] == b'':
+            urlData['path'] = b'/'
 
         if(not urlData['port']):
-            urlData['port'] = 443 if (urlData['scheme'] == 'https') else 80
+            urlData['port'] = 443 if (urlData['scheme'] == b'https') else 80
 
-        # Contenido del envío HTTP
-        packet = (
-            'GET ' + str(urlData['path'].strip()) + ' HTTP/1.1\r\n'
-            'Host: ' + urlData['host'] + '\r\n'
-            'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/54.0\r\n'
-            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n'
-            'Accept-Language: en-US\r\n'
-            'Referer: ' + referer + '\r\n'
-            'Cookie: ' + self.getCookiesHttpFormat() + '\r\n'
-            'Connection: close\r\n'
-            '\r\n'
-        )
+        packet = None
 
-        print('Conectando: ' + url + ' ...')
+        if(postData):
+            packet = '\r\n'.join([
+                b'POST ' + urlData['uri'] + b' HTTP/1.1',
+                b'Host: ' + urlData['host'],
+                b'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/54.0',
+                b'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                b'Accept-Language: en-US',
+                b'Referer: ' + (self.lastUrl if self.lastUrl else url),
+                b'Cookie: ' + self.getCookiesHttpFormat(),
+                b'Content-Type: application/x-www-form-urlencoded',
+                b'Content-Length: ' + str(len(postData)).encode('utf-8'),
+                b'Connection: close',
+                b'\r\n',
+                postData
+            ])
+
+        else:
+            packet = b'\r\n'.join([
+                b'GET ' + urlData['uri'] + b' HTTP/1.1',
+                b'Host: ' + urlData['host'],
+                b'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/54.0',
+                b'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                b'Accept-Language: en-US',
+                b'Referer: ' + (self.lastUrl if self.lastUrl else url),
+                b'Cookie: ' + self.getCookiesHttpFormat(),
+                b'Connection: close',
+                b'\r\n'
+            ])
+
+        self.lastUrl = url
+
+        print('Conectando: ' + url.decode('UTF-8', 'ignore') + ' ...')
 
         socketHandler = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         socketHandler.settimeout(40)
         
         # Usa SSL?
-        if(urlData['scheme'] == 'https'):
+        if(urlData['scheme'] == b'https'):
             socketWraped = ssl.wrap_socket(socketHandler)
         else:
             socketWraped = socketHandler
 
-        socketWraped.connect((str(urlData['host']), int(urlData['port'])))
+        socketWraped.connect((str(urlData['host'].decode()), int(urlData['port'])))
 
-        socketWraped.send(packet.encode('utf-8', 'ignore'))
+        socketWraped.send(packet)
 
         bytesRresponse = b''
         while True:
@@ -136,8 +164,8 @@ class Bot(object):
     def getCookiesHttpFormat(self):
         cookies = []
         for key, value in self.cookies.items():
-            cookies.append(key + '=' + value)
-        return '; '.join(cookies)
+            cookies.append(key + b'=' + value)
+        return b'; '.join(cookies)
 
 
     def parseCookiesByHttpResponse(self, buffer_response):
