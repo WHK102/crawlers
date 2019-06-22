@@ -153,54 +153,56 @@ class Bot(object):
                 tmp[key] = value
             headers = tmp
 
-        # TODO: Support?
-        # Transfer-Encoding: chunked  [OK]
-        # Transfer-Encoding: compress
-        # Transfer-Encoding: deflate
-        # Transfer-Encoding: gzip
-        # Transfer-Encoding: identity
+        # Method of transfering the http body
+        if(b'Transfer-Encoding' in headers):
 
-        # Chunked response body?
-        # https://tools.ietf.org/rfc/rfc7230.txt
-        if(headers[b'Transfer-Encoding'] == b'chunked'):
-
-            # Length in hex, convert to int base 16
-            bytesLength = b''
-            byteLength  = 0
-            bytesBody   = b''
-
-            while(True):
-
-                # Find next bytes length
-                if(body[:1] != b'\n'):
-                    if(body[:1] != b'\r'):
-                        bytesLength += body[:1]
-                    body = body[1:]
-
-                else:
-
-                    # End of bytes?
-                    if(bytesLength == b'0'):
-                        break
-
-                    # Strip \n
-                    body = body[1:]
-                    
-                    # Add to real body
-                    bytesBody += body[:int(bytesLength, 16)]
-
-                    # Pop bytes (less memory usage)
-                    body = body[int(bytesLength, 16) + 2:] # 2:\r\n
-
-                    # Reset length
-                    bytesLength = b''
-
-            # Transfer value
-            body = bytesBody
-
-            # Free memory
-            bytesBody = None
+            # TODO: Support?
+            # Transfer-Encoding: chunked  [OK]
+            # Transfer-Encoding: compress
+            # Transfer-Encoding: deflate
+            # Transfer-Encoding: gzip
+            # Transfer-Encoding: identity
         
+            # Chunked response body?
+            # https://tools.ietf.org/rfc/rfc7230.txt
+            if(headers[b'Transfer-Encoding'] == b'chunked'):
+
+                # Length in hex, convert to int base 16
+                bytesLength = b''
+                byteLength  = 0
+                bytesBody   = b''
+
+                while(True):
+
+                    # Find next bytes length
+                    if(body[:1] != b'\n'):
+                        if(body[:1] != b'\r'):
+                            bytesLength += body[:1]
+                        body = body[1:]
+
+                    else:
+
+                        # End of bytes?
+                        if(bytesLength == b'0'):
+                            break
+
+                        # Strip \n
+                        body = body[1:]
+                        
+                        # Add to real body
+                        bytesBody += body[:int(bytesLength, 16)]
+
+                        # Pop bytes (less memory usage)
+                        body = body[int(bytesLength, 16) + 2:] # 2:\r\n
+
+                        # Reset length
+                        bytesLength = b''
+
+                # Transfer value
+                body = bytesBody
+
+                # Free memory
+                bytesBody = None
 
         # Return the result
         return {
