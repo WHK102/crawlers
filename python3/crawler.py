@@ -111,11 +111,14 @@ class Bot(object):
         
         # Usa SSL?
         if(urlData['scheme'] == b'https'):
-            socketWraped = ssl.wrap_socket(socketHandler)
+            socketWraped = ssl.create_default_context().wrap_socket(
+                socketHandler,
+                server_hostname=urlData['host'].decode()
+            )
         else:
             socketWraped = socketHandler
 
-        socketWraped.connect((str(urlData['host'].decode()), int(urlData['port'])))
+        socketWraped.connect((urlData['host'].decode(), int(urlData['port'])))
 
         socketWraped.send(packet)
 
