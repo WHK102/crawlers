@@ -52,7 +52,7 @@ class Bot(object):
                 postData = postData.encode('utf-8', 'ignore')
 
 #        if(customHeaders):
-#            # Une las cabeceras personalizadas
+#            # Join custom headers
 #            headers.update(customHeaders)
 
         #Formatea la dirección URL
@@ -106,8 +106,6 @@ class Bot(object):
 
         self.lastUrl = url
 
-        print('Conectando: ' + url.decode('UTF-8', 'ignore') + ' ...')
-
         socketHandler = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         socketHandler.settimeout(40)
         
@@ -130,7 +128,7 @@ class Bot(object):
         socketWraped.shutdown(1)
         socketWraped.close()
 
-        # Guarda las cookies
+        # Save the cookies
         self.parseCookiesByHttpResponse(bytesRresponse)
 
         statusCode = 0
@@ -148,11 +146,60 @@ class Bot(object):
             for item in headers.split(b'\r\n'):
                 value = item.split(b':')
                 key = value.pop(0).strip()
-                value = b':'.join(value)
+                value = b':'.join(value).strip()
                 tmp[key] = value
             headers = tmp
 
-        # Retorna los datos obtenidos
+        # TODO: Support?
+        # Transfer-Encoding: chunked  [OK]
+        # Transfer-Encoding: compress
+        # Transfer-Encoding: deflate
+        # Transfer-Encoding: gzip
+        # Transfer-Encoding: identity
+
+        # Chunked response body?
+        # https://tools.ietf.org/rfc/rfc7230.txt
+        if(headers[b'Transfer-Encoding'] == b'chunked'):
+
+            # Length in hex, convert to int base 16
+            bytesLength = b''
+            byteLength  = 0
+            bytesBody   = b''
+
+            while(True):
+
+                # Find next bytes length
+                if(body[:1] != b'\n'):
+                    if(body[:1] != b'\r'):
+                        bytesLength += body[:1]
+                    body = body[1:]
+
+                else:
+
+                    # End of bytes?
+                    if(bytesLength == b'0'):
+                        break
+
+                    # Strip \n
+                    body = body[1:]
+                    
+                    # Add to real body
+                    bytesBody += body[:int(bytesLength, 16)]
+
+                    # Pop bytes (less memory usage)
+                    body = body[int(bytesLength, 16) + 2:] # 2:\r\n
+
+                    # Reset length
+                    bytesLength = b''
+
+            # Transfer value
+            body = bytesBody
+
+            # Free memory
+            bytesBody = None
+        
+
+        # Return the result
         return {
             'status-code'      : statusCode,
             'response-content' : body,
