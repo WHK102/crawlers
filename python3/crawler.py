@@ -46,7 +46,7 @@ class Bot(object):
         if(postData):
             
             if(isinstance(postData, dict)):
-                postData = urlencode(postData)
+                postData = urlencode(postData).encode('utf-8', 'ignore')
 
             if(isinstance(postData, str)):
                 postData = postData.encode('utf-8', 'ignore')
@@ -76,7 +76,7 @@ class Bot(object):
         packet = None
 
         if(postData):
-            packet = '\r\n'.join([
+            packet = b'\r\n'.join([
                 b'POST ' + urlData['uri'] + b' HTTP/1.1',
                 b'Host: ' + urlData['host'],
                 b'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/54.0',
@@ -87,7 +87,7 @@ class Bot(object):
                 b'Content-Type: application/x-www-form-urlencoded',
                 b'Content-Length: ' + str(len(postData)).encode('utf-8'),
                 b'Connection: close',
-                b'\r\n',
+                b'',
                 postData
             ])
 
@@ -153,15 +153,14 @@ class Bot(object):
                 tmp[key] = value
             headers = tmp
 
-        # Method of transfering the http body
-        if(b'Transfer-Encoding' in headers):
+        # TODO: Support?
+        # Transfer-Encoding: chunked  [OK]
+        # Transfer-Encoding: compress
+        # Transfer-Encoding: deflate
+        # Transfer-Encoding: gzip
+        # Transfer-Encoding: identity
 
-            # TODO: Support?
-            # Transfer-Encoding: chunked  [OK]
-            # Transfer-Encoding: compress
-            # Transfer-Encoding: deflate
-            # Transfer-Encoding: gzip
-            # Transfer-Encoding: identity
+        if(b'Transfer-Encoding' in headers):
         
             # Chunked response body?
             # https://tools.ietf.org/rfc/rfc7230.txt
