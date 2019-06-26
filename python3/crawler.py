@@ -118,6 +118,11 @@ class Bot(object):
         else:
             socketWraped = socketHandler
 
+        # Strip the custom port from the hostname
+        if(b':' in urlData['host']):
+            urlData['host'] = urlData['host'].split(b':')[0]
+
+        # Connect to server
         socketWraped.connect((urlData['host'].decode(), int(urlData['port'])))
 
         socketWraped.send(packet)
