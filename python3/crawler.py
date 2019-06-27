@@ -72,6 +72,10 @@ class Bot(object):
 
         if(not urlData['port']):
             urlData['port'] = 443 if (urlData['scheme'] == b'https') else 80
+        
+        # Strip the custom port from the hostname
+        if(b':' in urlData['host']):
+            urlData['host'] = urlData['host'].split(b':')[0]
 
         packet = None
 
@@ -117,10 +121,6 @@ class Bot(object):
             )
         else:
             socketWraped = socketHandler
-
-        # Strip the custom port from the hostname
-        if(b':' in urlData['host']):
-            urlData['host'] = urlData['host'].split(b':')[0]
 
         # Connect to server
         socketWraped.connect((urlData['host'].decode(), int(urlData['port'])))
